@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Розклад · МОа-26 / МОб-26</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root, [data-theme="dark"]{
+    --ink:#161c14;
+    --paper:#eee9dc;
+    --paper-dim:#e2ddcd;
+    --pine:#33553f;
+    --pine-deep:#203828;
+    --rust:#a8542c;
+    --rust-deep:#7c3c1e;
+    --line:#c9c2ac;
+    --muted:#6e6a5b;
+    --radius:3px;
+
+    --bg:#10140f;
+    --bg-panel:#171d14;
+    --bg-input:#0d110b;
+    --border:#333c2b;
+    --border-soft:#262e1e;
+    --border-btn:#454f3c;
+    --text:#eee9dc;
+    --text-dim:#a9a693;
+    --text-dimmer:#8b8874;
+    --text-tab:#84806e;
+    --text-meta:#9a9682;
+    --text-empty:#5c5947;
+    --text-footer:#655f4b;
+    --hover-bg:#1c2417;
+    --bell-now-bg:#231710;
+    --moa-color:var(--moa-color);
+    --mob-color:var(--mob-color);
+    --error-bg:#2b1a12;
+    --error-text:#e4b697;
+    --shimmer1:#1c2417;
+    --shimmer2:#252d1e;
+    color-scheme: dark;
+  }
+
+  [data-theme="light"]{
+    --ink:#161c14;
+    --paper:#191f16;
+    --paper-dim:#e2ddcd;
+    --pine:#33553f;
+    --pine-deep:#254531;
+    --rust:#a8542c;
+    --rust-deep:#8a4522;
+    --line:#c9c2ac;
+    --muted:#5c5847;
+
+    --bg:#f5f1e4;
+    --bg-panel:#ffffff;
+    --bg-input:#ffffff;
+    --border:#ddd6c1;
+    --border-soft:#e9e3d0;
+    --border-btn:#cfc7ad;
+    --text:#191f16;
+    --text-dim:#5c5847;
+    --text-dimmer:#726d59;
+    --text-tab:#8a8570;
+    --text-meta:#5f5b48;
+    --text-empty:#a39d86;
+    --text-footer:#8a8570;
+    --hover-bg:#efe9d6;
+    --bell-now-bg:#fbe4d3;
+    --moa-color:#2c6b45;
+    --mob-color:#a8542c;
+    --error-bg:#fbe9df;
+    --error-text:#8a3d1c;
+    --shimmer1:#eee8d6;
+    --shimmer2:#f6f2e4;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    transition:background .2s ease, color .2s ease;
+    font-family:'Space Grotesk', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:980px;
+    margin:0 auto;
+    padding:32px 20px 80px;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
+    border-bottom:1px solid var(--border);
+    padding-bottom:22px;
+    margin-bottom:26px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(32px,5vw,46px);
+    line-height:1.05;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .subtitle{
+    margin-top:8px;
+    color:var(--text-dim);
+    font-size:14px;
+    max-width:56ch;
+    line-height:1.5;
+  }
+  .status{
+    text-align:right;
+    font-size:12px;
+    color:var(--text-dimmer);
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+  }
+  .status .dot{
+    display:inline-block;
+    width:7px;height:7px;
+    border-radius:50%;
+    background:var(--pine);
+    margin-right:6px;
+    position:relative;top:-1px;
+    transition:background .2s ease;
+  }
+  .status.loading .dot{
+    background:var(--rust);
+    animation:pulse 1s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:.35;}
+  }
+  .status.error .dot{background:var(--rust);animation:none;}
+  .status-buttons{display:flex;gap:8px;}
+  button.refresh, button.bell-toggle{
+    background:none;
+    border:1px solid var(--border-btn);
+    color:var(--text);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:12px;
+    padding:7px 14px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, transform .1s ease;
+    white-space:nowrap;
+  }
+  button.refresh:hover, button.bell-toggle:hover{border-color:var(--pine);background:var(--hover-bg);}
+  button.refresh:active, button.bell-toggle:active{transform:scale(0.97);}
+  button.refresh:disabled{opacity:.5;cursor:default;}
+  button.bell-toggle.active{border-color:var(--rust);color:var(--rust);}
+  button.theme-toggle{min-width:38px;}
+
+  /* ---------- Bell schedule panel ---------- */
+  .bell-panel{
+    display:none;
+    margin-bottom:26px;
+    border:1px solid var(--border);
+    background:var(--bg-panel);
+    padding:18px 20px;
+    animation:fadeSlide .18s ease;
+  }
+  .bell-panel.open{display:block;}
+  .bell-panel h2{
+    font-family:'Fraunces',serif;
+    font-size:15px;
+    font-weight:600;
+    margin:0 0 14px;
+    color:var(--text-dim);
+    letter-spacing:.02em;
+  }
+  .bell-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px 18px;
+  }
+  @media (max-width:680px){
+    .bell-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  .bell-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:8px 10px;
+    background:var(--bg);
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius);
+    font-size:13px;
+  }
+  .bell-item.now-item{border-color:var(--rust);background:var(--bell-now-bg);}
+  .bell-item .bell-num{color:var(--text-dimmer);font-size:11.5px;}
+  .bell-item .bell-time{font-variant-numeric:tabular-nums;color:var(--text);}
+  .bell-item.now-item .bell-time{color:var(--rust);font-weight:600;}
+
+  @keyframes fadeSlide{
+    from{opacity:0;transform:translateY(-4px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+
+  /* ---------- Day tabs ---------- */
+  .day-tabs{
+    display:flex;
+    gap:2px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--border);
+  }
+  .day-tab{
+    flex:1;
+    text-align:center;
+    padding:12px 4px 13px;
+    background:none;
+    border:none;
+    color:var(--text-tab);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:13.5px;
+    font-weight:500;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+    transition:color .15s ease, border-color .15s ease;
+    letter-spacing:.02em;
+  }
+  .day-tab:hover{color:var(--text);}
+  .day-tab.active{
+    color:var(--text);
+    border-bottom-color:var(--rust);
+  }
+  .day-tab .today-mark{
+    display:block;
+    font-size:9px;
+    color:var(--rust);
+    margin-top:2px;
+    letter-spacing:.08em;
+  }
+
+  /* ---------- Groups grid ---------- */
+  .groups{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+    animation:fadeIn .15s ease;
+  }
+  @keyframes fadeIn{
+    from{opacity:0;}
+    to{opacity:1;}
+  }
+  @media (max-width:680px){
+    .groups{grid-template-columns:1fr;}
+  }
+  .group-col{
+    background:var(--bg-panel);
+    padding:20px 20px 26px;
+  }
+  .group-name{
+    font-family:'Fraunces',serif;
+    font-size:20px;
+    font-weight:600;
+    margin:0 0 18px;
+    padding-bottom:12px;
+    border-bottom:1px solid var(--border);
+  }
+  .group-col.moa .group-name{color:var(--moa-color);}
+  .group-col.mob .group-name{color:var(--mob-color);}
+
+  .pair{
+    padding:14px 10px 14px 14px;
+    border-bottom:1px solid var(--border-soft);
+    border-left:3px solid transparent;
+    margin-left:-14px;
+    transition:background .15s ease, border-color .15s ease;
+    border-radius:0 var(--radius) var(--radius) 0;
+  }
+  .pair:last-child{border-bottom:none;}
+  .pair.current-pair{
+    border-left-color:var(--rust);
+    background:rgba(168,84,44,0.08);
+  }
+  .pair-num{
+    font-size:11px;
+    color:var(--muted);
+    letter-spacing:.06em;
+    margin-bottom:6px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .pair-num .now-tag{
+    color:var(--rust);
+    font-size:9.5px;
+    font-weight:600;
+    letter-spacing:.08em;
+    border:1px solid var(--rust-deep);
+    padding:1px 6px;
+    border-radius:20px;
+  }
+  .pair-subject{
+    font-family:'Fraunces',serif;
+    font-size:16.5px;
+    line-height:1.35;
+    color:var(--text);
+    margin-bottom:4px;
+  }
+  .pair-meta{
+    font-size:12.5px;
+    color:var(--text-meta);
+    line-height:1.5;
+  }
+  .pair.empty .pair-subject{
+    font-style:italic;
+    color:var(--text-empty);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:14px;
+  }
+  .pair-divider{
+    height:1px;
+    background:var(--border);
+    margin:10px 0;
+  }
+
+  /* ---------- Footer / settings ---------- */
+  footer{
+    margin-top:34px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    font-size:11.5px;
+    color:var(--text-footer);
+  }
+  .settings-toggle{
+    background:none;border:none;color:var(--text-footer);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:11.5px;text-decoration:underline;
+    cursor:pointer;padding:0;
+  }
+  .settings-panel{
+    display:none;
+    margin-top:16px;
+    padding:16px;
+    border:1px solid var(--border);
+    background:var(--bg-panel);
+  }
+  .settings-panel.open{display:block;}
+  .settings-panel label{display:block;font-size:11px;color:var(--text-dimmer);margin-bottom:6px;}
+  .settings-panel input{
+    width:100%;
+    padding:8px 10px;
+    background:var(--bg-input);
+    border:1px solid var(--border-btn);
+    color:var(--text);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:12.5px;
+    border-radius:var(--radius);
+  }
+  .settings-panel .row{display:flex;gap:10px;margin-top:12px;}
+  .settings-panel button{
+    background:var(--pine-deep);border:1px solid var(--pine);color:var(--text);
+    padding:8px 16px;font-size:12px;border-radius:var(--radius);cursor:pointer;
+  }
+  .settings-panel .reset{background:none;border:1px solid var(--border-btn);}
+
+  .error-banner{
+    display:none;
+    background:var(--error-bg);
+    border:1px solid var(--rust-deep);
+    color:var(--error-text);
+    padding:14px 16px;
+    font-size:13px;
+    line-height:1.5;
+    margin-bottom:22px;
+  }
+  .error-banner.show{display:block;}
+
+  .loading-row{padding:40px 0;text-align:center;color:var(--text-footer);font-size:13px;}
+
+  /* skeleton shimmer for very first load (no cache yet) */
+  .skeleton-groups{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+  @media (max-width:680px){.skeleton-groups{grid-template-columns:1fr;}}
+  .skeleton-col{background:var(--bg-panel);padding:20px;}
+  .skeleton-line{height:14px;border-radius:2px;margin-bottom:10px;background:linear-gradient(90deg,var(--shimmer1) 25%,var(--shimmer2) 37%,var(--shimmer1) 63%);background-size:400% 100%;animation:shimmer 1.4s ease infinite;}
+  .skeleton-line.short{width:40%;}
+  @keyframes shimmer{0%{background-position:100% 0;}100%{background-position:0 0;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Розклад пар</h1>
+      <div class="subtitle" id="subtitle">1 курс · МОа-26 / МОб-26</div>
+    </div>
+    <div class="status" id="status">
+      <div><span class="dot"></span><span id="statusText">завантаження…</span></div>
+      <div class="status-buttons">
+        <button class="bell-toggle theme-toggle" id="themeToggle" title="Перемкнути тему" aria-label="Перемкнути тему"></button>
+        <button class="bell-toggle" id="bellToggle">Дзвінки</button>
+        <button class="refresh" id="refreshBtn">Оновити зараз</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <div class="bell-panel" id="bellPanel">
+    <h2>Розклад дзвінків</h2>
+    <div class="bell-grid" id="bellGrid"></div>
+  </div>
+
+  <div class="day-tabs" id="dayTabs"></div>
+
+  <div id="groupsHolder">
+    <div class="skeleton-groups">
+      <div class="skeleton-col">
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+      <div class="skeleton-col">
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="footerNote">Дані оновлюються автоматично з опублікованої Google-таблиці.</span>
+    <button class="settings-toggle" id="settingsToggle">джерело даних</button>
+  </footer>
+
+  <div class="settings-panel" id="settingsPanel">
+    <label for="csvUrlInput">Посилання на CSV-експорт таблиці (File → Опублікувати в інтернеті → CSV)</label>
+    <input type="text" id="csvUrlInput">
+    <div class="row">
+      <button id="saveUrlBtn">Зберегти і оновити</button>
+      <button class="reset" id="resetUrlBtn">Скинути до типового</button>
+    </div>
+
+    <label for="relayUrlInput" style="margin-top:16px;">Необов'язково: URL власного релею (Google Apps Script Web App), якщо публічні проксі заблоковані у вашій мережі</label>
+    <input type="text" id="relayUrlInput" placeholder="https://script.google.com/macros/s/xxxxx/exec">
+    <div class="row">
+      <button id="saveRelayBtn">Зберегти релей</button>
+      <button class="reset" id="clearRelayBtn">Прибрати релей</button>
+    </div>
+
+    <label for="pasteCsvInput" style="margin-top:16px;">Якщо завантаження постійно не вдається (проксі заблоковано): відкрийте таблицю → «Файл» → «Опублікувати в інтернеті» → CSV, відкрийте те посилання окремо, скопіюйте весь текст і вставте нижче</label>
+    <textarea id="pasteCsvInput" rows="5" style="width:100%;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border-btn);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:12px;border-radius:var(--radius);resize:vertical;"></textarea>
+    <div class="row">
+      <button id="usePasteBtn">Використати вставлені дані</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DEFAULT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQefLGaOwFFyQ26xl8h3M1qPYLMLIZkFusiPt-bFlTEZHT4KSfdL0EFTM94NXyPXOfn5tMT-mUuKYZD/pub?output=csv";
+  var STORAGE_KEY = "rozklad_csv_url_v1";
+  var RELAY_STORAGE_KEY = "rozklad_relay_url_v1";
+  var CACHE_KEY = "rozklad_cache_v1";
+  var AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 хвилин
+
+  var DAY_PREFIXES = [
+    ["ПОНЕД", "Понеділок"],
+    ["ВІВТ", "Вівторок"],
+    ["СЕРЕД", "Середа"],
+    ["ЧЕТВ", "Четвер"],
+    ["П'ЯТ", "П'ятниця"],
+    ["П’ЯТ", "П'ятниця"],
+    ["СУБОТ", "Субота"],
+    ["НЕДІЛ", "Неділя"]
+  ];
+  // JS Date.getDay(): 0=Нд,1=Пн,2=Вт,3=Ср,4=Чт,5=Пт,6=Сб
+  var TODAY_INDEX_TO_LABEL = ["Неділя","Понеділок","Вівторок","Середа","Четвер","П'ятниця","Субота"];
+
+  var BELL_SCHEDULE = [
+    {num:1, start:"8:00",  end:"9:20"},
+    {num:2, start:"9:40",  end:"11:00"},
+    {num:3, start:"11:20", end:"12:40"},
+    {num:4, start:"13:00", end:"14:20"},
+    {num:5, start:"14:40", end:"16:00"},
+    {num:6, start:"16:10", end:"17:30"},
+    {num:7, start:"17:40", end:"19:00"},
+    {num:8, start:"19:10", end:"20:30"}
+  ];
+
+  var state = { schedule: null, dayOrder: [], moaLabel: "МОа", mobLabel: "МОб", activeDay: null };
+
+  var els = {
+    statusWrap: document.getElementById('status'),
+    statusText: document.getElementById('statusText'),
+    refreshBtn: document.getElementById('refreshBtn'),
+    errorBanner: document.getElementById('errorBanner'),
+    dayTabs: document.getElementById('dayTabs'),
+    groupsHolder: document.getElementById('groupsHolder'),
+    subtitle: document.getElementById('subtitle'),
+    settingsToggle: document.getElementById('settingsToggle'),
+    settingsPanel: document.getElementById('settingsPanel'),
+    csvUrlInput: document.getElementById('csvUrlInput'),
+    saveUrlBtn: document.getElementById('saveUrlBtn'),
+    resetUrlBtn: document.getElementById('resetUrlBtn'),
+    relayUrlInput: document.getElementById('relayUrlInput'),
+    saveRelayBtn: document.getElementById('saveRelayBtn'),
+    clearRelayBtn: document.getElementById('clearRelayBtn'),
+    bellToggle: document.getElementById('bellToggle'),
+    bellPanel: document.getElementById('bellPanel'),
+    bellGrid: document.getElementById('bellGrid'),
+    themeToggle: document.getElementById('themeToggle'),
+    pasteCsvInput: document.getElementById('pasteCsvInput'),
+    usePasteBtn: document.getElementById('usePasteBtn')
+  };
+
+  // ---- тема: темна / світла ----
+  var THEME_KEY = "rozklad_theme_v1";
+  function getPreferredTheme(){
+    try{
+      var saved = localStorage.getItem(THEME_KEY);
+      if (saved === 'light' || saved === 'dark') return saved;
+    }catch(e){}
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  }
+  function applyTheme(theme){
+    document.documentElement.setAttribute('data-theme', theme);
+    els.themeToggle.textContent = theme === 'light' ? '🌙 Темна' : '☀️ Світла';
+    try{ localStorage.setItem(THEME_KEY, theme); }catch(e){}
+  }
+  applyTheme(getPreferredTheme());
+  els.themeToggle.addEventListener('click', function(){
+    var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    applyTheme(current === 'light' ? 'dark' : 'light');
+  });
+
+  function getCsvUrl(){
+    try{
+      return localStorage.getItem(STORAGE_KEY) || DEFAULT_CSV_URL;
+    }catch(e){ return DEFAULT_CSV_URL; }
+  }
+  function setCsvUrl(url){
+    try{ localStorage.setItem(STORAGE_KEY, url); }catch(e){}
+  }
+  function getRelayUrl(){
+    try{ return localStorage.getItem(RELAY_STORAGE_KEY) || ""; }catch(e){ return ""; }
+  }
+  function setRelayUrl(url){
+    try{
+      if (url) localStorage.setItem(RELAY_STORAGE_KEY, url);
+      else localStorage.removeItem(RELAY_STORAGE_KEY);
+    }catch(e){}
+  }
+  // Похідне посилання на XLSX-експорт тієї ж опублікованої таблиці.
+  // На відміну від CSV, XLSX зберігає реальні об'єднання комірок (colspan),
+  // що дає змогу коректно "розтягувати" спільні заняття на МОа/МОб.
+  function getXlsxUrl(){
+    var base = getCsvUrl();
+    if (/output=csv/i.test(base)) return base.replace(/output=csv/i, 'output=xlsx');
+    if (/output=xlsx/i.test(base)) return base;
+    if (/\/pubhtml/i.test(base)) return base.replace(/\/pubhtml.*$/i, '/pub?output=xlsx');
+    return base + (base.indexOf('?') > -1 ? '&' : '?') + 'output=xlsx';
+  }
+
+  function dayLabelFor(cell){
+    var up = (cell || "").trim().toUpperCase();
+    for (var i=0;i<DAY_PREFIXES.length;i++){
+      if (up.indexOf(DAY_PREFIXES[i][0]) === 0) return DAY_PREFIXES[i][1];
+    }
+    return null;
+  }
+
+  // ---- дзвінки ----
+  function timeToMin(t){
+    var p = t.split(':');
+    return (+p[0]) * 60 + (+p[1]);
+  }
+  function bellFor(num){
+    for (var i=0;i<BELL_SCHEDULE.length;i++){ if (BELL_SCHEDULE[i].num === num) return BELL_SCHEDULE[i]; }
+    return null;
+  }
+  function currentPairNum(){
+    var now = new Date();
+    var mins = now.getHours()*60 + now.getMinutes();
+    for (var i=0;i<BELL_SCHEDULE.length;i++){
+      var b = BELL_SCHEDULE[i];
+      if (mins >= timeToMin(b.start) && mins <= timeToMin(b.end)) return b.num;
+    }
+    return null;
+  }
+  function renderBellGrid(){
+    els.bellGrid.innerHTML = "";
+    var curNum = currentPairNum();
+    BELL_SCHEDULE.forEach(function(b){
+      var item = document.createElement('div');
+      item.className = 'bell-item' + (b.num === curNum ? ' now-item' : '');
+      item.innerHTML = '<span class="bell-num">Пара ' + b.num + '</span><span class="bell-time">' + b.start + '–' + b.end + '</span>';
+      els.bellGrid.appendChild(item);
+    });
+  }
+
+  function fetchWithTimeout(url, ms){
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, ms);
+    return fetch(url, {cache:'no-store', signal:controller.signal}).finally(function(){
+      clearTimeout(timer);
+    });
+  }
+
+  function looksLikeCsv(text){
+    return !!text && text.trim().length > 0 && text.trim().indexOf('<') !== 0;
+  }
+  function looksLikeXlsx(buf){
+    if (!buf || buf.byteLength < 4) return false;
+    var bytes = new Uint8Array(buf, 0, 2);
+    return bytes[0] === 0x50 && bytes[1] === 0x4B; // ZIP-сигнатура "PK"
+  }
+
+  // Запускає всі варіанти завантаження ПАРАЛЕЛЬНО і повертає перший, що
+  // успішно відповів валідними даними — це набагато швидше за послідовний
+  // перебір проксі один за одним.
+  function raceFirstValid(tasks){
+    return new Promise(function(resolve, reject){
+      var pending = tasks.length;
+      var errors = [];
+      if (!pending){ reject(new Error('немає спроб завантаження')); return; }
+      tasks.forEach(function(t){
+        Promise.resolve().then(t.exec).then(function(raw){
+          if (!t.validate(raw)) throw new Error('невалідна відповідь');
+          resolve({ name: t.name, data: raw });
+        }).catch(function(e){
+          var reason = (e && e.name === 'AbortError') ? 'таймаут' : (e && e.message ? e.message : String(e));
+          errors.push(t.name + ': ' + reason);
+          pending--;
+          if (pending === 0) reject(new Error(errors.join(' → ')));
+        });
+      });
+    });
+  }
+
+  async function fetchText(url){
+    var bust = (url.indexOf('?') > -1 ? '&' : '?') + '_ts=' + Date.now();
+    var target = url + bust;
+    var tasks = [
+      { name:'напряму', exec: function(){ return fetchWithTimeout(target, 7000).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }); }, validate: looksLikeCsv }
+    ];
+    // Власний релей (Google Apps Script Web App) — якщо налаштований, пробуємо
+    // його паралельно з проксі. Він не залежить від сторонніх CORS-проксі і
+    // зазвичай працює навіть у мережах, де ці проксі заблоковані.
+    var relay = getRelayUrl();
+    if (relay){
+      tasks.push({ name: 'релей', exec: function(){ return fetchWithTimeout(relay + (relay.indexOf('?') > -1 ? '&' : '?') + '_ts=' + Date.now(), 8000).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }); }, validate: looksLikeCsv });
+    }
+    var proxies = [
+      { name: 'proxy: codetabs', build: function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
+      { name: 'proxy: allorigins', build: function(u){ return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); } },
+      { name: 'proxy: thingproxy', build: function(u){ return 'https://thingproxy.freeboard.io/fetch/' + u; } }
+      // corsproxy.io прибрано: сервіс з 2024 року вимагає платного API-ключа
+      // і завжди повертає HTTP 401 для безкоштовних запитів.
+    ];
+    proxies.forEach(function(p){
+      tasks.push({ name: p.name, exec: function(){ return fetchWithTimeout(p.build(target), 9000).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }); }, validate: looksLikeCsv });
+    });
+    var result = await raceFirstValid(tasks);
+    return result.data;
+  }
+
+  async function fetchArrayBuffer(url){
+    var bust = (url.indexOf('?') > -1 ? '&' : '?') + '_ts=' + Date.now();
+    var target = url + bust;
+    var tasks = [
+      { name:'напряму', exec: function(){ return fetchWithTimeout(target, 8000).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); }); }, validate: looksLikeXlsx }
+    ];
+    var proxies = [
+      { name: 'proxy: codetabs', build: function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
+      { name: 'proxy: thingproxy', build: function(u){ return 'https://thingproxy.freeboard.io/fetch/' + u; } }
+      // corsproxy.io прибрано: сервіс з 2024 року вимагає платного API-ключа
+      // і завжди повертає HTTP 401 для безкоштовних запитів.
+    ];
+    proxies.forEach(function(p){
+      tasks.push({ name: p.name, exec: function(){ return fetchWithTimeout(p.build(target), 10000).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); }); }, validate: looksLikeXlsx });
+    });
+    var result = await raceFirstValid(tasks);
+    return result.data;
+  }
+
+  // Google Sheets при експорті "розтягнутих" (об'єднаних) комірок лишає текст
+  // тільки в лівій "якірній" колонці, а решту колонок об'єднання робить порожніми.
+  // Ця функція відновлює це: якщо комірка порожня, вона успадковує значення
+  // найближчої непорожньої комірки зліва в тому ж рядку (це і є МСб → МОа → МОб).
+  function forwardFillRow(values){
+    var out = values.slice();
+    var last = "";
+    for (var i=0;i<out.length;i++){
+      var v = (out[i]||"").trim();
+      if (v){ last = v; out[i] = v; }
+      else { out[i] = last; }
+    }
+    return out;
+  }
+
+  var SUBGROUP_SEP = "\n———\n";
+
+  function parseScheduleCsv(csvText){
+    var parsed = Papa.parse(csvText, {skipEmptyLines:false});
+    var rows = parsed.data;
+
+    var headerRowIdx = -1, moaCols = [], mobCols = [], moaLabel = "МОа", mobLabel = "МОб";
+    for (var r=0;r<rows.length;r++){
+      var row = rows[r];
+      var fMoa = [], fMob = [];
+      for (var c=0;c<row.length;c++){
+        var v = (row[c]||"").trim().toLowerCase();
+        if (v.indexOf("моа") === 0) fMoa.push(c);
+        if (v.indexOf("моб") === 0) fMob.push(c);
+      }
+      if (fMoa.length && fMob.length){
+        headerRowIdx = r; moaCols = fMoa; mobCols = fMob;
+        moaLabel = (row[fMoa[0]]||"МОа").trim();
+        mobLabel = (row[fMob[0]]||"МОб").trim();
+        break;
+      }
+    }
+    if (headerRowIdx === -1) throw new Error("У таблиці не знайдено стовпців МОа / МОб.");
+
+    var subtitleParts = [];
+    for (var s=0;s<headerRowIdx;s++){
+      var first = (rows[s][0]||"").trim();
+      if (first) subtitleParts.push(first);
+    }
+
+    var schedule = {};
+    var dayOrder = [];
+    var currentDay = null;
+
+    for (var i=headerRowIdx+1;i<rows.length;i++){
+      var row = rows[i];
+      if (!row || row.length === 0) continue;
+      var col0 = (row[0]||"").trim();
+      var col1 = (row[1]||"").trim();
+
+      var newDay = dayLabelFor(col0);
+      if (newDay){
+        currentDay = newDay;
+        if (!schedule[currentDay]){ schedule[currentDay] = []; dayOrder.push(currentDay); }
+        col1 = (row[1]||"").trim();
+      }
+
+      if (currentDay && col1){
+        var filled = forwardFillRow(row);
+        var moaVals = [], mobVals = [];
+        moaCols.forEach(function(c){ var v=(filled[c]||"").trim(); if (v && moaVals.indexOf(v)===-1) moaVals.push(v); });
+        mobCols.forEach(function(c){ var v=(filled[c]||"").trim(); if (v && mobVals.indexOf(v)===-1) mobVals.push(v); });
+        if (!mobVals.length && moaVals.length) mobVals = moaVals.slice();
+        if (!moaVals.length && mobVals.length) moaVals = mobVals.slice();
+        schedule[currentDay].push({
+          num: schedule[currentDay].length + 1,
+          moa: moaVals.join(SUBGROUP_SEP),
+          mob: mobVals.join(SUBGROUP_SEP)
+        });
+      }
+    }
+
+    if (dayOrder.length === 0) throw new Error("Не вдалось розпізнати дні тижня в таблиці.");
+
+    return { schedule: schedule, dayOrder: dayOrder, moaLabel: moaLabel, mobLabel: mobLabel, subtitle: subtitleParts.join(" · ") };
+  }
+
+  function parseScheduleXlsx(arrayBuffer){
+    var wb = XLSX.read(new Uint8Array(arrayBuffer), {type:'array'});
+    var sheetName = wb.SheetNames[0];
+    var sheet = wb.Sheets[sheetName];
+    var merges = sheet['!merges'] || [];
+    var aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:"", raw:false, blankrows:true});
+
+    function mergeAnchor(r,c){
+      for (var i=0;i<merges.length;i++){
+        var m = merges[i];
+        if (r>=m.s.r && r<=m.e.r && c>=m.s.c && c<=m.e.c) return {r:m.s.r, c:m.s.c};
+      }
+      return null;
+    }
+    function cellValue(r,c){
+      if (r<0 || r>=aoa.length) return "";
+      var row = aoa[r] || [];
+      var raw = row[c];
+      var v = (raw==null ? "" : String(raw)).trim();
+      if (v) return v;
+      var anchor = mergeAnchor(r,c);
+      if (anchor && !(anchor.r===r && anchor.c===c)){
+        var arow = aoa[anchor.r] || [];
+        var av = arow[anchor.c];
+        return av==null ? "" : String(av).trim();
+      }
+      return "";
+    }
+
+    var headerRowIdx = -1, moaCols = [], mobCols = [], moaLabel = "МОа", mobLabel = "МОб";
+    for (var r=0;r<aoa.length;r++){
+      var row = aoa[r] || [];
+      var fMoa = [], fMob = [];
+      for (var c=0;c<row.length;c++){
+        var v = (row[c]==null? "" : String(row[c])).trim().toLowerCase();
+        if (v.indexOf("моа") === 0) fMoa.push(c);
+        if (v.indexOf("моб") === 0) fMob.push(c);
+      }
+      if (fMoa.length && fMob.length){
+        headerRowIdx = r; moaCols = fMoa; mobCols = fMob;
+        moaLabel = String(row[fMoa[0]]||"МОа").trim();
+        mobLabel = String(row[fMob[0]]||"МОб").trim();
+        break;
+      }
+    }
+    if (headerRowIdx === -1) throw new Error("У таблиці не знайдено стовпців МОа / МОб.");
+
+    var subtitleParts = [];
+    for (var s=0;s<headerRowIdx;s++){
+      var first = cellValue(s,0);
+      if (first) subtitleParts.push(first);
+    }
+
+    function groupText(filledRow, cols){
+      var seen = [];
+      cols.forEach(function(c){
+        var v = (filledRow[c]||"").trim();
+        if (v && seen.indexOf(v) === -1) seen.push(v);
+      });
+      return seen;
+    }
+
+    var schedule = {};
+    var dayOrder = [];
+    var currentDay = null;
+    var maxCols = 0;
+    aoa.forEach(function(row){ if (row && row.length > maxCols) maxCols = row.length; });
+
+    for (var i=headerRowIdx+1;i<aoa.length;i++){
+      var col0 = cellValue(i,0);
+      var col1raw = (aoa[i]||[])[1];
+      var col1 = (col1raw==null? "" : String(col1raw)).trim() || cellValue(i,1);
+
+      var newDay = dayLabelFor(col0);
+      if (newDay){
+        currentDay = newDay;
+        if (!schedule[currentDay]){ schedule[currentDay] = []; dayOrder.push(currentDay); }
+      }
+
+      if (currentDay && col1){
+        var resolved = [];
+        for (var c=0;c<maxCols;c++){ resolved.push(cellValue(i,c)); }
+        var filled = forwardFillRow(resolved);
+
+        var moaVals = groupText(filled, moaCols);
+        var mobVals = groupText(filled, mobCols);
+        if (!mobVals.length && moaVals.length) mobVals = moaVals.slice();
+        if (!moaVals.length && mobVals.length) moaVals = mobVals.slice();
+
+        schedule[currentDay].push({
+          num: schedule[currentDay].length + 1,
+          moa: moaVals.join(SUBGROUP_SEP),
+          mob: mobVals.join(SUBGROUP_SEP)
+        });
+      }
+    }
+
+    if (dayOrder.length === 0) throw new Error("Не вдалось розпізнати дні тижня в таблиці.");
+
+    return { schedule: schedule, dayOrder: dayOrder, moaLabel: moaLabel, mobLabel: mobLabel, subtitle: subtitleParts.join(" · ") };
+  }
+
+  // ---- локальний кеш для миттєвого показу при повторному відкритті ----
+  function loadCache(){
+    try{
+      var raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      if (!obj || !obj.schedule || !obj.dayOrder) return null;
+      return obj;
+    }catch(e){ return null; }
+  }
+  function saveCache(result){
+    try{
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        schedule: result.schedule,
+        dayOrder: result.dayOrder,
+        moaLabel: result.moaLabel,
+        mobLabel: result.mobLabel,
+        subtitle: result.subtitle,
+        savedAt: Date.now()
+      }));
+    }catch(e){}
+  }
+
+  function renderDayTabs(){
+    els.dayTabs.innerHTML = "";
+    var todayLabel = TODAY_INDEX_TO_LABEL[new Date().getDay()];
+    state.dayOrder.forEach(function(day){
+      var btn = document.createElement('button');
+      btn.className = 'day-tab' + (day === state.activeDay ? ' active' : '');
+      btn.innerHTML = day + (day === todayLabel ? '<span class="today-mark">сьогодні</span>' : '');
+      btn.addEventListener('click', function(){
+        state.activeDay = day;
+        renderDayTabs();
+        renderGroups();
+      });
+      els.dayTabs.appendChild(btn);
+    });
+  }
+
+  function renderPairBlock(pair, key, isToday){
+    var wrap = document.createElement('div');
+    var content = pair[key];
+    var isCurrent = isToday && pair.num === currentPairNum();
+    wrap.className = 'pair' + (content ? '' : ' empty') + (isCurrent ? ' current-pair' : '');
+
+    var numDiv = document.createElement('div');
+    numDiv.className = 'pair-num';
+    var bell = bellFor(pair.num);
+    var numText = 'Пара ' + pair.num + (bell ? ' · ' + bell.start + '–' + bell.end : '');
+    numDiv.appendChild(document.createTextNode(numText));
+    if (isCurrent){
+      var tag = document.createElement('span');
+      tag.className = 'now-tag';
+      tag.textContent = 'зараз';
+      numDiv.appendChild(tag);
+    }
+    wrap.appendChild(numDiv);
+
+    if (!content){
+      var empty = document.createElement('div');
+      empty.className = 'pair-subject';
+      empty.textContent = 'Занять немає';
+      wrap.appendChild(empty);
+      return wrap;
+    }
+
+    var blocks = content.split(SUBGROUP_SEP);
+    blocks.forEach(function(block, idx){
+      var lines = block.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+      var subject = document.createElement('div');
+      subject.className = 'pair-subject';
+      subject.textContent = lines[0] || block;
+      wrap.appendChild(subject);
+
+      if (lines.length > 1){
+        var meta = document.createElement('div');
+        meta.className = 'pair-meta';
+        meta.textContent = lines.slice(1).join(' · ');
+        wrap.appendChild(meta);
+      }
+      if (idx < blocks.length - 1){
+        var divider = document.createElement('div');
+        divider.className = 'pair-divider';
+        wrap.appendChild(divider);
+      }
+    });
+    return wrap;
+  }
+
+  function renderGroups(){
+    els.groupsHolder.innerHTML = "";
+    var pairs = state.schedule[state.activeDay] || [];
+    var todayLabel = TODAY_INDEX_TO_LABEL[new Date().getDay()];
+    var isToday = state.activeDay === todayLabel;
+    var grid = document.createElement('div');
+    grid.className = 'groups';
+
+    [['moa', state.moaLabel], ['mob', state.mobLabel]].forEach(function(pairInfo){
+      var key = pairInfo[0], label = pairInfo[1];
+      var col = document.createElement('div');
+      col.className = 'group-col ' + key;
+      var title = document.createElement('div');
+      title.className = 'group-name';
+      title.textContent = label;
+      col.appendChild(title);
+      if (pairs.length === 0){
+        var none = document.createElement('div');
+        none.className = 'pair empty';
+        none.innerHTML = '<div class="pair-subject">Занять немає</div>';
+        col.appendChild(none);
+      } else {
+        pairs.forEach(function(p){ col.appendChild(renderPairBlock(p, key, isToday)); });
+      }
+      grid.appendChild(col);
+    });
+
+    els.groupsHolder.appendChild(grid);
+  }
+
+  function setStatus(text, mode){
+    // mode: 'loading' | 'error' | undefined(normal)
+    els.statusText.textContent = text;
+    els.statusWrap.classList.toggle('error', mode === 'error');
+    els.statusWrap.classList.toggle('loading', mode === 'loading');
+  }
+
+  function showError(msg){
+    els.errorBanner.textContent = msg;
+    els.errorBanner.classList.add('show');
+  }
+  function hideError(){
+    els.errorBanner.classList.remove('show');
+  }
+
+  function applyResult(result){
+    state.schedule = result.schedule;
+    state.dayOrder = result.dayOrder;
+    state.moaLabel = result.moaLabel;
+    state.mobLabel = result.mobLabel;
+    if (result.subtitle) els.subtitle.textContent = result.subtitle;
+
+    var todayLabel = TODAY_INDEX_TO_LABEL[new Date().getDay()];
+    if (!state.activeDay || state.dayOrder.indexOf(state.activeDay) === -1){
+      state.activeDay = state.dayOrder.indexOf(todayLabel) > -1 ? todayLabel : state.dayOrder[0];
+    }
+    renderDayTabs();
+    renderGroups();
+  }
+
+  async function loadSchedule(isManual){
+    if (isManual){ els.refreshBtn.disabled = true; els.refreshBtn.textContent = 'Оновлюю…'; }
+    setStatus('оновлення…', 'loading');
+    try{
+      var result;
+      var usedFallback = false;
+      try{
+        var xlsxUrl = getXlsxUrl();
+        var buf = await fetchArrayBuffer(xlsxUrl);
+        result = parseScheduleXlsx(buf);
+      }catch(xlsxErr){
+        usedFallback = true;
+        var csvUrl = getCsvUrl();
+        var text = await fetchText(csvUrl);
+        result = parseScheduleCsv(text);
+      }
+
+      applyResult(result);
+      saveCache(result);
+      hideError();
+
+      var now = new Date();
+      var stamp = 'оновлено о ' + now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'});
+      setStatus(usedFallback ? (stamp + ' (спрощений режим)') : stamp);
+    }catch(err){
+      setStatus('помилка оновлення', 'error');
+      showError('Не вдалося завантажити розклад: ' + err.message + '. Усі проксі-сервери недоступні з вашої мережі. Відкрийте «джерело даних» внизу — там можна вставити CSV вручну, це завжди працює.');
+    }finally{
+      if (isManual){ els.refreshBtn.disabled = false; els.refreshBtn.textContent = 'Оновити зараз'; }
+    }
+  }
+
+  // ---- дзвінки: перемикач панелі ----
+  els.bellToggle.addEventListener('click', function(){
+    els.bellPanel.classList.toggle('open');
+    els.bellToggle.classList.toggle('active');
+  });
+
+  // ---- settings panel ----
+  els.settingsToggle.addEventListener('click', function(){
+    els.csvUrlInput.value = getCsvUrl();
+    els.relayUrlInput.value = getRelayUrl();
+    els.settingsPanel.classList.toggle('open');
+  });
+  els.saveUrlBtn.addEventListener('click', function(){
+    var val = els.csvUrlInput.value.trim();
+    if (val){ setCsvUrl(val); loadSchedule(true); }
+  });
+  els.resetUrlBtn.addEventListener('click', function(){
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+    els.csvUrlInput.value = DEFAULT_CSV_URL;
+    loadSchedule(true);
+  });
+  els.saveRelayBtn.addEventListener('click', function(){
+    var val = els.relayUrlInput.value.trim();
+    setRelayUrl(val);
+    loadSchedule(true);
+  });
+  els.clearRelayBtn.addEventListener('click', function(){
+    setRelayUrl("");
+    els.relayUrlInput.value = "";
+    loadSchedule(true);
+  });
+  els.refreshBtn.addEventListener('click', function(){ loadSchedule(true); });
+
+  // ---- ручне вставлення CSV, коли всі проксі недоступні ----
+  els.usePasteBtn.addEventListener('click', function(){
+    var text = els.pasteCsvInput.value;
+    if (!text || !text.trim()){
+      showError('Спочатку вставте текст CSV у поле вище.');
+      return;
+    }
+    try{
+      var result = parseScheduleCsv(text);
+      applyResult(result);
+      saveCache(result);
+      hideError();
+      var now = new Date();
+      setStatus('оновлено вручну о ' + now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'}));
+      els.settingsPanel.classList.remove('open');
+    }catch(err){
+      setStatus('помилка оновлення', 'error');
+      showError('Не вдалося розпізнати вставлений CSV: ' + err.message);
+    }
+  });
+
+  renderBellGrid();
+  setInterval(renderBellGrid, 60 * 1000); // оновлювати позначку "зараз" щохвилини
+
+  // Миттєво показуємо останній збережений розклад з кешу (якщо є), поки
+  // тягнеться свіжа версія у фоні — так додаток відкривається без затримки.
+  var cached = loadCache();
+  if (cached){
+    applyResult(cached);
+    var minsAgo = cached.savedAt ? Math.round((Date.now() - cached.savedAt) / 60000) : null;
+    setStatus('з кешу' + (minsAgo != null ? ' (' + minsAgo + ' хв тому)' : '') + ' · оновлюю…', 'loading');
+  }
+
+  loadSchedule(false);
+  setInterval(function(){ loadSchedule(false); }, AUTO_REFRESH_MS);
+})();
+</script>
+</body>
+</html>
