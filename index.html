@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -25,6 +26,7 @@
 <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <style>
   :root{
     /* dark theme (default) */
@@ -280,7 +282,7 @@
   .day-tab .today-mark{display:block;font-size:8.5px;opacity:.8;margin-bottom:2px;letter-spacing:.08em;text-transform:uppercase;order:-1;}
 
   /* ---------- Groups grid ---------- */
-  .groups{display:grid;grid-template-columns:1fr 1fr;gap:16px;position:relative;z-index:1;animation:fadeIn .15s ease;}
+  .groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;position:relative;z-index:1;animation:fadeIn .15s ease;}
   @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
   @media (max-width:680px){.groups{grid-template-columns:1fr;}}
   .group-col{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;transition:border-color .15s ease, box-shadow .15s ease;}
@@ -291,6 +293,7 @@
   }
   .group-col.moa .group-name{color:var(--accent);}
   .group-col.mob .group-name{color:var(--text);}
+  .group-col.elective .group-name{color:var(--rust);}
 
   .pair{
     padding:12px 14px;border:1px solid var(--border);background:var(--card-bg);
@@ -1200,8 +1203,8 @@
   var currentUserData = null; // профіль поточного користувача Firebase (uid, email, group, fullName)
 
   var STUDENTS = {
-    moa: ["Бердникович Артьом","Божко Маргарита","Буханцов Михайло","Гарькава Каріна","Гордієнко Ніна","Гурин Софія","Дем'яненко Тетяна","Єфименко Єлизавета","Захарова Анастасія","Колісник Вадим","Короп Катерина","Лавріненко Олександра","Лазаренко Аліна","Любчич Валерія","Лякун Михайло","Максименко Тетяна","Медведєва Єлізавета","Населевська Вікторія","Нечитайло Марія","Пойда Михайло","Роззуваєва Вікторія","Савранська Жанна","Сидорова Анастасія","Соломіна Наталія","Сторчак Каріна","Фірсов Кіріл","Цілуйко Марія","Шайдаров Владислав","Шамайда Маргарита","Шульга Анна","Шумейко Ангеліна","Юрик Софія"],
-    mob: ["Базарник Ілля","Волкова Анна","Денисенко Лілія","Довгохатько Назар","Жукевич Діана","Іванова Таїсія","Квітницька Катерина","Кравченко Анна","Куртова Діана","Мельник Дарія","Мітіна Вікторія","Мошура Юлія","Невмитий Ярослав","Нечаєва Поліна","Овчаренко Ігор","Петросян Артем","Платошина Марія","Пуха Іванна","Рождественський Павло","Салинська Катерина","Самопал Максим","Сахно Каріна","Семененко Марина","Січкар Олександра","Слінченко Анна","Тарасюк Вікторія","Тарасюк Віталій","Фесенко Віталій","Шведенко Світлана","Шевченко Наталія","Шендрик Анна","Шраменко Артур","Шуплина Данило"]
+    moa: ["Бердникович Артьом","Божко Маргарита","Буханцов Михайло","Гарькава Каріна","Гордієнко Ніна","Гурин Софія","Дем'яненко Тетяна","Єфименко Єлизавета","Захарова Анастасія","Колісник Вадим","Короп Катерина","Лавріненко Олександра","Лазаренко Аліна","Лякун Михайло","Максименко Тетяна","Медведєва Єлізавета","Населевська Вікторія","Любчич Валерія","Нечитайло Марія","Пойда Михайло","Роззуваєва Вікторія","Савранська Жанна","Сидорова Анастасія","Соломіна Наталія","Сторчак Каріна","Фірсов Кіріл","Цілуйко Марія","Шайдаров Владислав","Шамайда Маргарита","Шульга Анна","Шумейко Ангеліна","Юрик Софія"],
+    mob: ["Рождественський Павло","Базарник Ілля","Волкова Анна","Денисенко Лілія","Довгохатько Назар","Жукевич Діана","Іванова Таїсія","Квітницька Катерина","Кравченко Анна","Куртова Діана","Салинська Катерина","Мітіна Вікторія","Мошура Юлія","Мельник Дарія","Невмитий Ярослав","Нечаєва Поліна","Овчаренко Ігор","Петросян Артем","Платошина Марія","Пуха Іванна","Самопал Максим","Сахно Каріна","Семененко Марина","Січкар Олександра","Слінченко Анна","Тарасюк Вікторія","Тарасюк Віталій","Фесенко Віталій","Шраменко Артур","Шведенко Світлана","Шевченко Наталія","Шендрик Анна"]
   };
   var STAROSTA = { moa: "Шайдаров Владислав", mob: "Січкар Олександра" };
 
@@ -1228,7 +1231,7 @@
     {num:8, start:"19:40", end:"21:00"}
   ];
 
-  var state = { schedule: null, dayOrder: [], moaLabel: "МОа", mobLabel: "МОб", activeDay: null };
+  var state = { schedule: null, dayOrder: [], moaLabel: "МОа", mobLabel: "МОб", electives: [], activeDay: null };
   state.activeDay = todayLabel();
 
   var els = {
@@ -2058,6 +2061,13 @@
     openNotesOverview();
   });
 
+  function labelForGroupKey(key){
+    if (key === 'moa') return state.moaLabel;
+    if (key === 'mob') return state.mobLabel;
+    var found = (state.electives || []).find(function(e){ return e.key === key; });
+    return found ? found.label : key;
+  }
+
   // ==================== Огляд нотаток ====================
   function openNotesOverview(){
     var notes = getNotes();
@@ -2070,7 +2080,7 @@
         var parts = id.split('|'); // day|group|pairNum
         var item = document.createElement('div');
         item.className = 'notes-list-item';
-        var groupLabel = parts[1] === 'moa' ? state.moaLabel : state.mobLabel;
+        var groupLabel = labelForGroupKey(parts[1]);
         item.innerHTML = '<div class="meta">' + parts[0] + ' · ' + groupLabel + ' · Пара ' + parts[2] + '</div><div class="txt"></div>';
         item.querySelector('.txt').textContent = notes[id];
         item.style.cursor = 'pointer';
@@ -2193,6 +2203,14 @@
     return fetch(url, {cache:'no-store', signal:controller.signal}).finally(function(){ clearTimeout(timer); });
   }
   function looksLikeCsv(text){ return !!text && text.trim().length > 0 && text.trim().indexOf('<') !== 0; }
+  // XLSX-файл — це ZIP-архів, він завжди починається з сигнатури байтів "PK".
+  // Якщо натомість прилетіла HTML-сторінка помилки чи порожня відповідь —
+  // ці перші два байти будуть іншими, і ми одразу підемо в резервний шлях.
+  function looksLikeXlsx(buf){
+    if (!buf || buf.byteLength < 4) return false;
+    var b = new Uint8Array(buf, 0, 2);
+    return b[0] === 0x50 && b[1] === 0x4B;
+  }
 
   // Запускає варіанти завантаження, повертає перший валідний.
   function raceFirstValid(tasks){
@@ -2244,23 +2262,90 @@
     }
   }
 
-  // Google при експорті об'єднаних комірок лишає текст лише в лівій "якірній"
-  // колонці; ця функція протягує значення вправо по порожніх комірках.
-  function forwardFillRow(values){
-    var out = values.slice(), last = "";
-    for (var i=0;i<out.length;i++){
-      var v = (out[i]||"").trim();
-      if (v){ last = v; out[i] = v; } else { out[i] = last; }
+  // Той самий принцип, що й fetchText, але для бінарного вмісту (XLSX) —
+  // релей повертає текст (CSV), тож для нього тут сенсу нема, а от публічні
+  // проксі бінарні дані передають без спотворень.
+  async function fetchArrayBuffer(url){
+    var target = url + (url.indexOf('?') > -1 ? '&' : '?') + '_ts=' + Date.now();
+    try{
+      var r = await fetchWithTimeout(target, 8000);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var direct = await r.arrayBuffer();
+      if (looksLikeXlsx(direct)) return direct;
+      throw new Error('невалідна відповідь');
+    }catch(directErr){
+      var tasks = [];
+      var proxies = [
+        { name: 'proxy: codetabs', build: function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
+        { name: 'proxy: allorigins', build: function(u){ return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); } },
+        { name: 'proxy: thingproxy', build: function(u){ return 'https://thingproxy.freeboard.io/fetch/' + u; } }
+      ];
+      proxies.forEach(function(p){
+        tasks.push({ name: p.name, exec: function(){ return fetchWithTimeout(p.build(target), 12000).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); }); }, validate: looksLikeXlsx });
+      });
+      if (!tasks.length) throw directErr;
+      var result = await raceFirstValid(tasks);
+      return result.data;
     }
-    return out;
+  }
+
+  // Публікація Google Таблиць віддає той самий документ у кількох форматах
+  // через параметр output — досить замінити csv на xlsx в тій самій адресі,
+  // щоб отримати ту саму таблицю разом з точними межами об'єднаних клітинок.
+  function getXlsxUrl(csvUrl){
+    if (/output=csv/i.test(csvUrl)) return csvUrl.replace(/output=csv/i, 'output=xlsx');
+    if (/output=[^&]+/i.test(csvUrl)) return csvUrl.replace(/output=[^&]+/i, 'output=xlsx');
+    return csvUrl + (csvUrl.indexOf('?') > -1 ? '&' : '?') + 'output=xlsx';
+  }
+
+  // Google при експорті у CSV об'єднаних комірок лишає текст лише в лівій
+  // "якірній" комірці, а межі об'єднання (скільки саме колонок воно займає)
+  // у самому CSV ніде не зафіксовані — їх можна тільки вгадувати. Ця функція
+  // (застосовується лише для аварійного текстового шляху, див. нижче) вгадує,
+  // протягуючи (forward-fill) значення всередині набору колонок ОДНІЄЇ групи —
+  // це евристика, а не точне знання меж об'єднання.
+  function valsForColsGuess(rowsInBlock, cols){
+    var vals = [], last = "";
+    rowsInBlock.forEach(function(row){
+      cols.forEach(function(c){
+        var raw = (row[c] || "").trim();
+        if (raw) last = raw;
+        if (last && vals.indexOf(last) === -1) vals.push(last);
+      });
+    });
+    return vals;
+  }
+
+  // Коли дані прийшли з XLSX і об'єднані клітинки вже розгорнуті за реальними
+  // межами (!merges — див. expandMerges нижче), вгадувати нічого не треба:
+  // кожна клітинка вже містить своє справжнє значення, тож просто збираємо
+  // унікальні непорожні значення по колонках без жодного forward-fill.
+  function valsForColsExact(rowsInBlock, cols){
+    var vals = [];
+    rowsInBlock.forEach(function(row){
+      cols.forEach(function(c){
+        var raw = (row[c] || "").trim();
+        if (raw && vals.indexOf(raw) === -1) vals.push(raw);
+      });
+    });
+    return vals;
   }
 
   var SUBGROUP_SEP = "\n———\n";
 
-  function parseScheduleCsv(csvText){
-    var parsed = Papa.parse(csvText, {skipEmptyLines:false});
-    var rows = parsed.data;
+  // Спільна логіка розбору розкладу з уже готової двовимірної таблиці рядків
+  // (rows[r][c] — рядок-рядок, рядок-стовпець). valsForColsFn визначає, як
+  // саме з набору колонок однієї групи/елективу дістати список пар: точно
+  // (після розгортання об'єднань з XLSX) або з евристики (для сирого CSV).
+  // Колонка B (індекс 1) — це "номер пари": саме її непорожність вирішує,
+  // чи вважати рядок реальною парою. Якщо ця колонка вертикально об'єднана
+  // (одна логічна пара фізично займає 2 рядки аркуша), то після розгортання
+  // об'єднань другий рядок теж матиме те саме значення — і без додаткової
+  // перевірки код порахував би її двічі.
+  var PAIR_NUM_COL = 1;
 
+  function buildScheduleFromRows(rows, valsForColsFn, isContinuationFn){
+    isContinuationFn = isContinuationFn || function(){ return false; };
     var headerRowIdx = -1, moaCols = [], mobCols = [], moaLabel = "МОа", mobLabel = "МОб";
     for (var r=0;r<rows.length;r++){
       var row = rows[r], fMoa = [], fMob = [];
@@ -2278,6 +2363,33 @@
     }
     if (headerRowIdx === -1) throw new Error("У таблиці не знайдено стовпців МОа / МОб.");
 
+    // ---- вибіркові дисципліни: будь-яка інша колонка в тому ж рядку заголовків,
+    // текст якої містить "вибірков" (вибіркові дисципліни / вибіркова дисципліна тощо).
+    // З'являється в таблиці — одразу підхоплюється й транслюється окремою карткою,
+    // без потреби змінювати код.
+    var headerRow = rows[headerRowIdx] || [];
+    var claimedCols = moaCols.concat(mobCols);
+    var electiveGroupsByLabel = {}, electiveOrder = [];
+    for (var hc=0; hc<headerRow.length; hc++){
+      if (claimedCols.indexOf(hc) !== -1) continue;
+      var headerText = (headerRow[hc]||"").trim();
+      if (!headerText || headerText.toLowerCase().indexOf("вибірков") === -1) continue;
+      if (!electiveGroupsByLabel[headerText]){
+        electiveGroupsByLabel[headerText] = [];
+        electiveOrder.push(headerText);
+      }
+      electiveGroupsByLabel[headerText].push(hc);
+    }
+    var electiveDefs = electiveOrder.map(function(label, idx){
+      return { key: 'el' + idx, label: label, cols: electiveGroupsByLabel[label] };
+    });
+
+    // Примітка: раніше тут була підстановка з колонок ІНШИХ спеціальностей
+    // (не МОа/МОб) у порожні клітинки МОа/МОб. Прибрано: пари з інших
+    // спеціальностей стосуються лише тих спеціальностей і не повинні
+    // потрапляти в розклад МОа/МОб. Єдина підстановка, що лишається, —
+    // між самими МОа і МОб (нижче), коли одна з двох колонок порожня.
+
     var subtitleParts = [];
     for (var s=0;s<headerRowIdx;s++){
       var first = (rows[s][0]||"").trim();
@@ -2287,6 +2399,7 @@
     var schedule = {}, dayOrder = [], currentDay = null;
 
     for (var i=headerRowIdx+1;i<rows.length;i++){
+      if (isContinuationFn(i)) continue;
       var row = rows[i];
       if (!row || row.length === 0) continue;
       var col0 = (row[0]||"").trim();
@@ -2300,18 +2413,128 @@
       }
 
       if (currentDay && col1){
-        var filled = forwardFillRow(row);
-        var moaVals = [], mobVals = [];
-        moaCols.forEach(function(c){ var v=(filled[c]||"").trim(); if (v && moaVals.indexOf(v)===-1) moaVals.push(v); });
-        mobCols.forEach(function(c){ var v=(filled[c]||"").trim(); if (v && mobVals.indexOf(v)===-1) mobVals.push(v); });
-        if (!mobVals.length && moaVals.length) mobVals = moaVals.slice();
-        if (!moaVals.length && mobVals.length) moaVals = mobVals.slice();
-        schedule[currentDay].push({ num: schedule[currentDay].length + 1, moa: moaVals.join(SUBGROUP_SEP), mob: mobVals.join(SUBGROUP_SEP) });
+        // Одна логічна пара може фізично займати кілька рядків аркуша
+        // (об'єднання по колонці номера пари). Реальний текст пари не
+        // завжди лежить саме в першому з цих рядків — тому замість того,
+        // щоб відкидати "зайві" рядки, збираємо їх усі в один блок і
+        // шукаємо вміст МОа/МОб/електив по КОЖНОМУ рядку блоку — так
+        // жодна пара не губиться незалежно від того, у якому саме
+        // фізичному рядку вона фактично записана.
+        var blockRows = [row];
+        var j = i + 1;
+        while (j < rows.length && isContinuationFn(j)){ blockRows.push(rows[j]); j++; }
+
+        var moaVals = valsForColsFn(blockRows, moaCols);
+        var mobVals = valsForColsFn(blockRows, mobCols);
+        // порожню клітинку заповнюємо парою другої групи (МОа ⇄ МОб) —
+        // і ТІЛЬКИ нею; пари з колонок інших спеціальностей сюди не
+        // підставляються (див. примітку вище). Це лишається як останній
+        // страхувальний випадок і після точного розгортання об'єднань:
+        // спрацьовує, тільки якщо обидві колонки справді порожні.
+        if (!moaVals.length) moaVals = mobVals.slice();
+        if (!mobVals.length) mobVals = moaVals.slice();
+        var pairObj = { num: schedule[currentDay].length + 1, moa: moaVals.join(SUBGROUP_SEP), mob: mobVals.join(SUBGROUP_SEP) };
+        electiveDefs.forEach(function(def){
+          pairObj[def.key] = valsForColsFn(blockRows, def.cols).join(SUBGROUP_SEP);
+        });
+        schedule[currentDay].push(pairObj);
       }
     }
 
     if (dayOrder.length === 0) throw new Error("Не вдалось розпізнати дні тижня в таблиці.");
-    return { schedule: schedule, dayOrder: dayOrder, moaLabel: moaLabel, mobLabel: mobLabel, subtitle: subtitleParts.join(" · ") };
+    return {
+      schedule: schedule, dayOrder: dayOrder, moaLabel: moaLabel, mobLabel: mobLabel,
+      subtitle: subtitleParts.join(" · "),
+      electives: electiveDefs.map(function(d){ return { key: d.key, label: d.label }; })
+    };
+  }
+
+  // ---- Аварійний текстовий шлях (CSV) ----
+  // Використовується лише як резерв, коли XLSX з якоїсь причини недоступний,
+  // або коли дані вставлено вручну через текстове поле. Межі об'єднаних
+  // клітинок тут НЕВІДОМІ (втрачені при експорті в CSV), тому підстановка —
+  // це евристика (valsForColsGuess), а не точне знання.
+  function parseScheduleCsv(csvText){
+    var parsed = Papa.parse(csvText, {skipEmptyLines:false});
+    return buildScheduleFromRows(parsed.data, valsForColsGuess);
+  }
+
+  // ---- Точний шлях (XLSX) ----
+  // XLSX зберігає реальні межі об'єднаних клітинок (лист['!merges']), тож
+  // можна розгорнути кожен діапазон точно, без вгадування — незалежно від
+  // того, наскільки далеко "чужа" об'єднана пара тягнеться вправо (навіть
+  // якщо вона перекриває МОа-26 і МОб-26 через кілька інших спеціальностей).
+  function expandMerges(aoa, merges){
+    (merges || []).forEach(function(m){
+      var anchorRow = aoa[m.s.r];
+      var val = (anchorRow && anchorRow[m.s.c] != null) ? anchorRow[m.s.c] : "";
+      for (var r = m.s.r; r <= m.e.r; r++){
+        if (!aoa[r]) aoa[r] = [];
+        for (var c = m.s.c; c <= m.e.c; c++){
+          aoa[r][c] = val;
+        }
+      }
+    });
+  }
+
+  // Якщо колонка "номер пари" (PAIR_NUM_COL) входить у вертикальне об'єднання
+  // (одна логічна пара фізично займає кілька рядків аркуша), усі рядки
+  // діапазону, крім першого (якоря), позначаємо як "продовження" — щоб не
+  // рахувати одну й ту саму пару кілька разів.
+  function continuationRowSet(merges){
+    var set = {};
+    (merges || []).forEach(function(m){
+      if (m.s.c <= PAIR_NUM_COL && PAIR_NUM_COL <= m.e.c && m.e.r > m.s.r){
+        for (var r = m.s.r + 1; r <= m.e.r; r++) set[r] = true;
+      }
+    });
+    return set;
+  }
+
+  // Важливо: sheet_to_json з header:1 повертає масив, індексований ВІДНОСНО
+  // початку зайнятого діапазону аркуша (ws['!ref']), а не завжди від A1.
+  // !merges натомість завжди зберігає АБСОЛЮТНІ координати клітинок. Якщо
+  // діапазон аркуша не починається точно з A1 (наприклад, є порожній рядок
+  // чи стовпець на початку), ці дві системи координат розходяться — і межі
+  // об'єднання накладаються не на ті клітинки. Тому тут таблиця будується
+  // вручну по абсолютних адресах (A1, B1, ...), щоб індекс [r][c] завжди
+  // дорівнював самій адресі, без жодних зсувів.
+  function sheetToExpandedRows(ws){
+    var ref = ws['!ref'] || 'A1:A1';
+    var range = XLSX.utils.decode_range(ref);
+    var aoa = [];
+    for (var r = 0; r <= range.e.r; r++){
+      var rowArr = [];
+      for (var c = 0; c <= range.e.c; c++){
+        var cell = ws[XLSX.utils.encode_cell({ r: r, c: c })];
+        rowArr.push(cell ? (cell.w != null ? cell.w : (cell.v != null ? cell.v : "")) : "");
+      }
+      aoa.push(rowArr);
+    }
+    expandMerges(aoa, ws['!merges']);
+    return aoa.map(function(row){
+      return row.map(function(cell){ return (cell == null) ? "" : String(cell).trim(); });
+    });
+  }
+
+  // У книзі може бути кілька аркушів (наприклад, ще й інші спеціальності чи
+  // службові сторінки) — перебираємо їх і беремо перший, де справді
+  // знаходяться колонки МОа/МОб.
+  function parseScheduleWorkbook(arrayBuffer){
+    var wb = XLSX.read(arrayBuffer, { type: 'array' });
+    var errors = [];
+    for (var i = 0; i < wb.SheetNames.length; i++){
+      var ws = wb.Sheets[wb.SheetNames[i]];
+      if (!ws) continue;
+      try{
+        var rows = sheetToExpandedRows(ws);
+        var isCont = continuationRowSet(ws['!merges']);
+        return buildScheduleFromRows(rows, valsForColsExact, function(r){ return !!isCont[r]; });
+      }catch(e){
+        errors.push(wb.SheetNames[i] + ': ' + e.message);
+      }
+    }
+    throw new Error('Не знайдено аркуш із колонками МОа/МОб у книзі. ' + errors.join(' | '));
   }
 
   // ---- кеш для миттєвого показу при повторному відкритті ----
@@ -2328,7 +2551,7 @@
     try{
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         schedule: result.schedule, dayOrder: result.dayOrder,
-        moaLabel: result.moaLabel, mobLabel: result.mobLabel,
+        moaLabel: result.moaLabel, mobLabel: result.mobLabel, electives: result.electives || [],
         subtitle: result.subtitle, savedAt: Date.now()
       }));
     }catch(e){}
@@ -2479,10 +2702,12 @@
     var myGroup = getMyGroup();
     var order = [['moa', state.moaLabel], ['mob', state.mobLabel]];
     if (myGroup === 'mob') order.reverse();
+    (state.electives || []).forEach(function(e){ order.push([e.key, e.label]); });
     order.forEach(function(pairInfo){
       var key = pairInfo[0], label = pairInfo[1];
+      var isElective = key.indexOf('el') === 0 && key !== 'moa' && key !== 'mob';
       var col = document.createElement('div');
-      col.className = 'group-col ' + key + (key === myGroup ? ' my-group' : '');
+      col.className = 'group-col ' + key + (isElective ? ' elective' : '') + (key === myGroup ? ' my-group' : '');
       var title = document.createElement('div');
       title.className = 'group-name';
       title.appendChild(document.createTextNode(label));
@@ -2521,6 +2746,7 @@
     state.dayOrder = result.dayOrder;
     state.moaLabel = result.moaLabel;
     state.mobLabel = result.mobLabel;
+    state.electives = result.electives || [];
     if (result.subtitle) els.subtitle.textContent = result.subtitle;
 
     if (!state.activeDay || FULL_WEEK.indexOf(state.activeDay) === -1){
@@ -2540,17 +2766,36 @@
     }
     if (isManual){ els.refreshBtn.disabled = true; els.refreshBtn.textContent = 'Оновлюю…'; }
     setStatus('оновлення…', 'loading');
+    var csvUrl = getCsvUrl();
     try{
-      var text = await fetchText(getCsvUrl());
-      var result = parseScheduleCsv(text);
+      // Основний шлях: XLSX зберігає точні межі об'єднаних клітинок, тож
+      // спільні пари (наприклад, одна пара одразу на кілька спеціальностей,
+      // включно з МОа/МОб) розпізнаються без вгадування.
+      var buf = await fetchArrayBuffer(getXlsxUrl(csvUrl));
+      var result = parseScheduleWorkbook(buf);
       applyResult(result);
       saveCache(result);
       hideError();
       var now = new Date();
       setStatus('оновлено о ' + now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'}));
-    }catch(err){
-      setStatus('помилка оновлення', 'error');
-      showError('Не вдалося завантажити розклад: ' + err.message + '. Відкрийте «джерело даних» внизу — там можна додати власний релей або вставити CSV вручну.');
+    }catch(xlsxErr){
+      // Резервний шлях: якщо XLSX з якоїсь причини недоступний (заблокований
+      // формат, збій проксі тощо) — падаємо назад на старий CSV-текст. Тут
+      // межі об'єднаних клітинок між різними спеціальностями невідомі, тому
+      // результат може бути неповним саме для спільних пар — але це краще,
+      // ніж узагалі лишитися без розкладу.
+      try{
+        var text = await fetchText(csvUrl);
+        var result2 = parseScheduleCsv(text);
+        applyResult(result2);
+        saveCache(result2);
+        hideError();
+        var now2 = new Date();
+        setStatus('оновлено о ' + now2.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'}) + ' · спрощений режим');
+      }catch(csvErr){
+        setStatus('помилка оновлення', 'error');
+        showError('Не вдалося завантажити розклад: ' + xlsxErr.message + '. Відкрийте «джерело даних» внизу — там можна додати власний релей або вставити CSV вручну.');
+      }
     }finally{
       if (isManual){ els.refreshBtn.disabled = false; els.refreshBtn.textContent = 'Оновити зараз'; }
     }
