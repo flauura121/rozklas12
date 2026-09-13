@@ -2364,10 +2364,48 @@
   // Публікація Google Таблиць віддає той самий документ у кількох форматах
   // через параметр output — досить замінити csv на xlsx в тій самій адресі,
   // щоб отримати ту саму таблицю разом з точними межами об'єднаних клітинок.
+  function looksLikeHtmlTable(text){ return !!text && /<table/i.test(text); }
+
+  // Той самий принцип, що й fetchText, але валідація — наявність <table>,
+  // а не CSV-вигляд (тут ми якраз ХОЧЕМО отримати HTML).
+  async function fetchHtmlDoc(url){
+    var target = url + (url.indexOf('?') > -1 ? '&' : '?') + '_ts=' + Date.now();
+    try{
+      var r = await fetchWithTimeout(target, 8000);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var direct = await r.text();
+      if (looksLikeHtmlTable(direct)) return direct;
+      throw new Error('невалідна відповідь');
+    }catch(directErr){
+      var proxies = [
+        { name: 'proxy: codetabs', build: function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
+        { name: 'proxy: allorigins', build: function(u){ return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); } },
+        { name: 'proxy: thingproxy', build: function(u){ return 'https://thingproxy.freeboard.io/fetch/' + u; } }
+      ];
+      var tasks = proxies.map(function(p){
+        return { name: p.name, exec: function(){ return fetchWithTimeout(p.build(target), 9000).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }); }, validate: looksLikeHtmlTable };
+      });
+      var result = await raceFirstValid(tasks);
+      return result.data;
+    }
+  }
+
   function getXlsxUrl(csvUrl){
     if (/output=csv/i.test(csvUrl)) return csvUrl.replace(/output=csv/i, 'output=xlsx');
     if (/output=[^&]+/i.test(csvUrl)) return csvUrl.replace(/output=[^&]+/i, 'output=xlsx');
     return csvUrl + (csvUrl.indexOf('?') > -1 ? '&' : '?') + 'output=xlsx';
+  }
+
+  // Та сама публікація, але у вигляді сторінки /pubhtml (замість /pub) —
+  // саме її Google завжди віддає коректно, навіть коли output=xlsx чомусь
+  // недоступний для конкретного документа.
+  function getPubHtmlUrl(csvUrl){
+    var idMatch = csvUrl.match(/\/d\/e\/([a-zA-Z0-9_-]+)\//);
+    if (!idMatch) return null;
+    var gidMatch = csvUrl.match(/[?&]gid=(\d+)/);
+    var url = 'https://docs.google.com/spreadsheets/d/e/' + idMatch[1] + '/pubhtml';
+    if (gidMatch) url += '?gid=' + gidMatch[1] + '&single=true';
+    return url;
   }
 
   // Google при експорті у CSV об'єднаних комірок лишає текст лише в лівій
@@ -2685,6 +2723,78 @@
     throw new Error('Не знайдено аркуш із колонками МОа/МОб у книзі. ' + errors.join(' | '));
   }
 
+  // ---- Проміжний шлях (опублікована HTML-сторінка, /pubhtml) ----
+  // Google для деяких документів, опублікованих через "Опублікувати в
+  // інтернеті", віддає output=csv, але відмовляється віддавати output=xlsx
+  // (повертає помилку чи порожню відповідь) — тоді XLSX-шлях вище падає
+  // ще до будь-якого парсингу. При цьому сама сторінка /pubhtml, яку
+  // Google показує в браузері, — це звичайний серверний HTML з таблицею,
+  // де об'єднані клітинки позначені справжніми атрибутами colspan/rowspan
+  // (так само, як !merges у XLSX). Тож можна розгорнути таку таблицю в
+  // ту саму структуру aoa+merges і застосувати вже наявну (і вже виправлену
+  // для спільних пар) expandMerges — без жодної нової евристики.
+  //
+  // Стандартний алгоритм розгортання HTML-таблиці з rowspan/colspan:
+  // клітинки в розмітці йдуть по порядку зліва направо в межах <tr>, але
+  // деякі колонки поточного рядка вже можуть бути "зайняті" rowspan-ом із
+  // попередніх рядків — такі колонки пропускаємо, перш ніж розмістити
+  // наступну клітинку розмітки.
+  function htmlTableToAoaAndMerges(table){
+    var aoa = [], merges = [], occupied = [];
+    var trs = table.querySelectorAll('tr');
+    var maxCols = 0;
+    for (var r = 0; r < trs.length; r++){
+      if (!aoa[r]) aoa[r] = [];
+      if (!occupied[r]) occupied[r] = {};
+      var cells = trs[r].children;
+      var col = 0;
+      for (var ci = 0; ci < cells.length; ci++){
+        while (occupied[r][col]) col++;
+        var cell = cells[ci];
+        var colSpan = parseInt(cell.getAttribute('colspan') || '1', 10) || 1;
+        var rowSpan = parseInt(cell.getAttribute('rowspan') || '1', 10) || 1;
+        aoa[r][col] = (cell.textContent || '').trim();
+        if (colSpan > 1 || rowSpan > 1){
+          merges.push({ s: { r: r, c: col }, e: { r: r + rowSpan - 1, c: col + colSpan - 1 } });
+        }
+        for (var rr = r; rr < r + rowSpan; rr++){
+          if (!occupied[rr]) occupied[rr] = {};
+          for (var cc = col; cc < col + colSpan; cc++) occupied[rr][cc] = true;
+        }
+        col += colSpan;
+        if (col > maxCols) maxCols = col;
+      }
+    }
+    aoa.forEach(function(row){
+      for (var c = 0; c < maxCols; c++){ if (row[c] === undefined) row[c] = ""; }
+    });
+    return { aoa: aoa, merges: merges };
+  }
+
+  // У опублікованій сторінці може бути кілька <table> (вкладки-аркуші) —
+  // так само, як і з XLSX, перебираємо їх і беремо перший, де реально
+  // знаходяться колонки МОа/МОб.
+  function parseScheduleHtml(htmlText){
+    var doc = new DOMParser().parseFromString(htmlText, 'text/html');
+    var tables = doc.querySelectorAll('table');
+    var errors = [];
+    for (var i = 0; i < tables.length; i++){
+      try{
+        var built = htmlTableToAoaAndMerges(tables[i]);
+        var moaGuardCols = findMoaMobCols(built.aoa);
+        expandMerges(built.aoa, built.merges, moaGuardCols);
+        var rows = built.aoa.map(function(row){
+          return row.map(function(cell){ return (cell == null) ? "" : String(cell).trim(); });
+        });
+        var isCont = continuationRowSet(built.merges);
+        return buildScheduleFromRows(rows, valsForColsExact, function(r){ return !!isCont[r]; });
+      }catch(e){
+        errors.push('таблиця ' + (i + 1) + ': ' + e.message);
+      }
+    }
+    throw new Error('Не знайдено таблицю з колонками МОа/МОб у HTML-сторінці. ' + errors.join(' | '));
+  }
+
   // ---- кеш для миттєвого показу при повторному відкритті ----
   function loadCache(){
     try{
@@ -2927,11 +3037,31 @@
       var now = new Date();
       setStatus('оновлено о ' + now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'}));
     }catch(xlsxErr){
-      // Резервний шлях: якщо XLSX з якоїсь причини недоступний (заблокований
-      // формат, збій проксі тощо) — падаємо назад на старий CSV-текст. Тут
-      // межі об'єднаних клітинок між різними спеціальностями невідомі, тому
-      // результат може бути неповним саме для спільних пар — але це краще,
-      // ніж узагалі лишитися без розкладу.
+      // Проміжний шлях: XLSX-експорт у деяких публікацій просто недоступний
+      // (Google повертає помилку саме для output=xlsx, хоча output=csv
+      // працює). Тоді пробуємо саму опубліковану HTML-сторінку (/pubhtml) —
+      // вона теж містить справжні colspan/rowspan для об'єднаних клітинок,
+      // тож спільні пари (включно з МОа/МОб) розпізнаються так само точно,
+      // як і в XLSX-шляху, без евристик.
+      try{
+        var pubHtmlUrl = getPubHtmlUrl(csvUrl);
+        if (!pubHtmlUrl) throw new Error('не вдалось визначити адресу опублікованої сторінки');
+        var htmlText = await fetchHtmlDoc(pubHtmlUrl);
+        var resultHtml = parseScheduleHtml(htmlText);
+        applyResult(resultHtml);
+        saveCache(resultHtml);
+        hideError();
+        var nowHtml = new Date();
+        setStatus('оновлено о ' + nowHtml.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'}));
+        return;
+      }catch(htmlErr){
+        // падаємо далі, у CSV-резерв
+      }
+      // Резервний шлях: якщо і XLSX, і HTML-сторінка з якоїсь причини
+      // недоступні — падаємо назад на старий CSV-текст. Тут межі об'єднаних
+      // клітинок між різними спеціальностями невідомі, тому результат може
+      // бути неповним саме для спільних пар — але це краще, ніж узагалі
+      // лишитися без розкладу.
       try{
         var text = await fetchText(csvUrl);
         var result2 = parseScheduleCsv(text);
